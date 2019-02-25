@@ -147,6 +147,50 @@ public interface AbcRosInterface {
      * @return 指令发送是否正常
      */
     public boolean guideAction(ActionCallBack callBack);
+
+
+
+    public abstract class ObjectDetectCallback {
+        /*
+        * 障碍物检测的距离单位
+        * */
+        public static final String DIMEN_KILOMETER = "dimen_kilometer";
+        public static final String DIMEN_METER = "dimen_meter";
+        public static final String DIMEN_DECIMETRE = "dimen_decimetre";
+        public static final String DIMEN_CENTIMETER = "dimen_centimeter";
+        /*
+        * 默认距离单位为米
+        * */
+        private String dimenDetect = DIMEN_METER;
+//        关心的障碍物距离范围容器
+        private HashMap mFilterDetect = new HashMap();
+
+        /**
+         * 添加障碍物检测关心的等级
+         * @param levelName  名称：不同等级名称不同，名称相同则关心的取值范围被覆盖
+         * @param levels    关心的障碍物距离范围如levels[0]~levels[1]
+         * @param dimen     距离单位
+         */
+        public void addDetectlevel(String levelName, float[] levels, String dimen) {
+            mFilterDetect.put(levelName, levels);
+        }
+
+        /**
+         * 障碍物距离监控回调
+         * @param levelName 监控的等级
+         * @param level     属于该等级的具体距离数值
+         * @param dimenUnit 距离单位
+         */
+        public abstract void onDetectLevelReached(String levelName, float level, String dimenUnit);
+
+        /**
+         * 障碍物检测发生异常时回调
+         * @param exceptionMsg  异常的具体信息
+         */
+        public abstract void onDetectException(String exceptionMsg);
+
+    }
+
     /**
      * ROS相关交互监听器
      * 通过addAction/addPowerLevel来增加监听事件
