@@ -27,9 +27,15 @@ public interface AbcRosInterface {
     public static final int ACTION_TYPE_SALUTE = 18; // 本体集成动作集，敬礼动作
     /**
      * 注册监听ROS层电量，异常等相关信息
-     * @param rosListener 监听器，ros根据监听器内action mFilterAction执行回调
+     * @param rosListener 监听器，ros根据监听器内action mFilterAction执行,回调当传入的值为mull时，代表注销检测
      */
     public void registerRosListener(RosListener rosListener);
+
+    /**
+     * 注册监听障碍物检测，当传入的值为mull时，代表注销检测
+     * @param objectDetectListener
+     */
+    public void registerObjectDetectListener(ObjectDetectCallback objectDetectListener);
     /**
      * 获取ROS层当前电量剩余比例
      * @return 剩余电量和满格电量比例
@@ -43,21 +49,21 @@ public interface AbcRosInterface {
     /**
      * 机器人移动制定距离
      * @param distance 移动距离
-     * @param si 移动距离对应单位
+     * @param si 移动距离对应单位,对应障碍物检测中的距离单位。
      * @param callBack 执行结果回调
      * @return 指令发送是否正常
      */
     public boolean startMove(float distance, String si, ActionCallBack callBack);
     /**
      * 发送身体转动请求给ROS
-     * @param angle 转动角度（顺时针正方向/逆时针负方向）
+     * @param angle 转动角度（顺时针正方向/逆时针负方向），当angle的数值大于360，也要继续旋转，代表转的圈数。
      * @param callBack 执行结果回调
      * @return 指令发送是否正常
      */
     public boolean startBodyTurn(float angle, ActionCallBack callBack);
     /**
      * 发送头部转动请求给ROS
-     * @param direction 水平转动/垂直转动
+     * @param direction 水平转动为：0/垂直转动为：1
      * @param angle 转动角度（顺时针正方向/逆时针负方向；向上为正/向下为负）
      * @param callBack 执行结果回调
      * @return 指令发送是否正常
@@ -65,7 +71,7 @@ public interface AbcRosInterface {
     public boolean startHeadTurn(int direction, float angle, ActionCallBack callBack);
     /**
      * 发送停止当前动作指令给ROS
-     * @param actionType 指令类型
+     * @param actionType 指令类型  见本接口提供的action类型值
      * @param callBack 执行结果回调
      * @return 指令发送是否正常
      */
@@ -83,6 +89,13 @@ public interface AbcRosInterface {
      * @return 指令发送是否正常
      */
     public boolean pauseNavigate(ActionCallBack callBack);
+
+    /**
+     * 取消 导航/巡航 任务
+     * @param callBack 执行结果回调
+     * @return 指令发送是否正常
+     */
+    public boolean cancleNavigate(ActionCallBack callBack);
     /**
      * 恢复处于暂停中的导航/巡航
      * @param callBack 继续导航/巡航的执行结果回调
@@ -91,12 +104,19 @@ public interface AbcRosInterface {
     public boolean resumeNavigate(ActionCallBack callBack);
     /**
      * 设置手臂动作
-     * @param armID 机器人手臂id
-     * @param actionID 手臂动作id
+     * @param armID 机器人手臂id  左-0；右-1；两只手-2；
+     * @param actionID 手臂动作id 厂商枚举。
      * @param callBack 执行结果回调
      * @return 指令发送是否正常
      */
     public boolean armAction(int armID, int actionID, ActionCallBack callBack);
+
+    /**
+     * @param actionID 机器人复合动作指令标识
+     * @param callBack  执行结果回调
+     * @return  指令发送是否正常
+     */
+    public boolean multiAction(String actionID, ActionCallBack callBack);
     /**
      * 设置手指动作
      * @param handActionId 手指动作指令集
@@ -107,12 +127,12 @@ public interface AbcRosInterface {
     public boolean fingerAction(int handSide, int[] handActionId, ActionCallBack callBack);
     /**
      * 手臂动作
-     * @param id light id
-     * @param colors 亮灯颜色十六进制序列
+     * @param id light id不同代表不同的灯，
+     * @param colors 亮灯颜色十六进制序列，该灯序列亮的模式
      * @param callBack 执行结果回调
      * @return 指令发送是否正常
      */
-    public boolean lightAction(int id, int[] colors, ActionCallBack callBack);
+    public boolean lightAction(int id, String colors, ActionCallBack callBack);
     /**
      * 返回充电位置并自动充电
      *
@@ -150,7 +170,7 @@ public interface AbcRosInterface {
 
 
 
-    public abstract class ObjectDetectCallback {
+    public interface ObjectDetectCallback {
         /*
         * 障碍物检测的距离单位
         * */
@@ -158,22 +178,15 @@ public interface AbcRosInterface {
         public static final String DIMEN_METER = "dimen_meter";
         public static final String DIMEN_DECIMETRE = "dimen_decimetre";
         public static final String DIMEN_CENTIMETER = "dimen_centimeter";
-        /*
-        * 默认距离单位为米
-        * */
-        private String dimenDetect = DIMEN_METER;
-//        关心的障碍物距离范围容器
-        private HashMap mFilterDetect = new HashMap();
 
         /**
          * 添加障碍物检测关心的等级
          * @param levelName  名称：不同等级名称不同，名称相同则关心的取值范围被覆盖
-         * @param levels    关心的障碍物距离范围如levels[0]~levels[1]
+         * @param lowLevels  关注电量的下限
+         * @param highLevel  关注电量的上限
          * @param dimen     距离单位
          */
-        public void addDetectlevel(String levelName, float[] levels, String dimen) {
-            mFilterDetect.put(levelName, levels);
-        }
+        void addDetectlevel(String levelName, float lowLevels, float highLevel, String dimen);
 
         /**
          * 障碍物距离监控回调
@@ -181,13 +194,18 @@ public interface AbcRosInterface {
          * @param level     属于该等级的具体距离数值
          * @param dimenUnit 距离单位
          */
-        public abstract void onDetectLevelReached(String levelName, float level, String dimenUnit);
+        void onDetectLevelReached(String levelName, float level, String dimenUnit);
 
         /**
          * 障碍物检测发生异常时回调
          * @param exceptionMsg  异常的具体信息
          */
-        public abstract void onDetectException(String exceptionMsg);
+        void onDetectException(String exceptionMsg);
+
+        /**
+         * @return 我们关注的障碍物范围的一个集合如： 1~2（lowLevelRange） 2~3(highLevelRange)  key:String, value:float[] ({1,2})
+         */
+        HashMap getDetectLevel();
 
     }
 
@@ -201,14 +219,19 @@ public interface AbcRosInterface {
      * 3.ACTION_POWER_TEMP    电池温度警告回调
      * 4.ACTION_ROS_EXCEPTION ROS异常信息回调
      */
-    public abstract class RosListener {
+    public interface RosListener {
         public static final String ACTION_CHARGE_STATUS = "charge_status";
         public static final String ACTION_POWER_LEVELS = "power_levels";
         public static final String ACTION_POWER_TEMP = "power_temp";
         public static final String ACTION_ROS_EXCEPTION = "ros_exception";
+        /**
+         * 未充电
+         */
         public static final int CHARGE_STATUS_IDLE = 1;
+        /**
+         * 充电中
+         */
         public static final int CHARGE_STATUS_CHARGINE = 2;
-        private HashMap mFilterAction = new HashMap();
         /**
          * ROS启动完成
          */
@@ -233,21 +256,25 @@ public interface AbcRosInterface {
          * @param status 充电中/IDLE参见CHARGE_STATUS_IDLE/HARGE_STATUS_CHARGINE
          */
         public abstract void onChargeStatue(int status);
+
         /**
          * 增加监听电池相关回调事件
+         *
          * @param action 监听事件，参见ACTION_XXXX
          */
-        public void addAction(String action) {
-            mFilterAction.put(action, null);
-        }
+        void addAction(String action);
+
         /**
          * 增加电量监控等级
          * @param action 监听电量等级
          * @param levels 回调电量等级，比如{10%, 20%}
          */
-        public void addPowerLevel(String action, float[] levels) {
-            mFilterAction.put(action, levels);
-        }
+        public void addPowerLevel(String action, float[] levels);
+
+        /**
+         * @return  我们关注的障碍物范围的一个集合如： 10%~20%（lowLevelRange） 80%~90%(highLevelRange)  key:String, value:float[] ({0.8,0.9})
+         */
+        HashMap getDetectLevel();
     }
     /**
      * 动作执行指令回调
@@ -281,5 +308,10 @@ public interface AbcRosInterface {
         public String mLocationName;
         public int mX;
         public int mY;
+        public Location(String mLocationName, int mX, int mY) {
+            this.mLocationName = mLocationName;
+            this.mX = mX;
+            this.mY = mY;
+        }
     }
 }
