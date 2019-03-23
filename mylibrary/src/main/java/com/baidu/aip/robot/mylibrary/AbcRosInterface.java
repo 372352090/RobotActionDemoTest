@@ -5,6 +5,7 @@ package com.baidu.aip.robot.mylibrary;
  */
 
 import java.util.HashMap;
+import java.util.List;
 
 public interface AbcRosInterface {
     public static final int ACTION_TYPE_MOVE = 1;
@@ -25,27 +26,123 @@ public interface AbcRosInterface {
     public static final int ACTION_TYPE_HUG = 16; // 本体集成动作集，拥抱动作
     public static final int ACTION_TYPE_GUID = 17; // 本体集成动作集，引导动作，这边请
     public static final int ACTION_TYPE_SALUTE = 18; // 本体集成动作集，敬礼动作
+
+    /**
+     * @param mapName
+     * @return
+     */
+    public boolean loadMap(String mapName);
+    /**
+     * @return 返回当前已经加载的地图名字
+     */
+    public String getMapName();
+
+    /**
+     * @return 返回机器人地图名字列表
+     */
+    public List<String> getMapList();
+
+    /**
+     * @return 返回机器人地图的导航点列表
+     */
+    public List<Location> getMapPointList();
+    /**
+     * @return 返回当前点的位置
+     */
+    public Location getCurrentPosition();
+
+    /**
+     * 开启人脸识别
+     * @param actionCallBack
+     */
+    public void startFaceTrace(ActionCallBack actionCallBack);
+
+    /**
+     * 关闭人脸追随,复位成功之后返回当前点的位置
+     * @return 是否成功
+     */
+    public boolean stopFaceTrace();
+
+    /**
+     * 头部展示表情
+     * @param expressionId 表情ID
+     * @param callBack 执行回调
+     */
+    public void showHeadExpression(String expressionId, ActionCallBack callBack);
+    /**
+     * 开启触摸监听
+     * @param callback
+     */
+    public void listenTouchEvent(TouchCallback callback);
+
+    public interface TouchCallback{
+        /**
+         * 左耳
+         */
+        public static final int TOUCH_TYPE_LEFT_EAR = 1;
+        /**
+         * 右耳
+         */
+        public static final int TOUCH_TYPE_RIGHT_EAR = 2;
+        /**
+         * 头顶
+         */
+        public static final int TOUCH_TYPE_TOP_HEAD = 3;
+        /**
+         * 下巴
+         */
+        public static final int TOUCH_TYPE_JAW = 4;
+        /**
+         * 腹部
+         */
+        public static final int TOUCH_TYPE_ABDOMEN  = 5;
+        /**
+         * 屁股
+         */
+        public static final int TOUCH_TYPE_ASS  = 6;
+
+        /**
+         * 触摸成功并返回触摸时间类型
+         * @param type TOUCH_TYPE
+         * @param message 备注
+         */
+        void onSuccessTouch(int type, String message);
+
+        /**
+         * 失败
+         * @param reason 失败信息
+         */
+        void onTouchFail(String reason);
+    }
+    /**
+     * 机器人位置重定位,地图加载之后进行的定位操作。
+     */
+    public void relocation(RelocationCallback callback);
     /**
      * 注册监听ROS层电量，异常等相关信息
      * @param rosListener 监听器，ros根据监听器内action mFilterAction执行,回调当传入的值为mull时，代表注销检测
      */
+
     public void registerRosListener(RosListener rosListener);
 
     /**
      * 注册监听障碍物检测，当传入的值为mull时，代表注销检测
      * @param objectDetectListener
      */
+
     public void registerObjectDetectListener(ObjectDetectCallback objectDetectListener);
     /**
      * 获取ROS层当前电量剩余比例
      * @return 剩余电量和满格电量比例
      */
+
     public float getBatteryLevel();
     /**
      * 获取ROS层电池容量
      * @return 满格电量数
      */
-    public void getBatteryScale();
+
+    public float getBatteryScale();
     /**
      * 机器人移动制定距离
      * @param distance 移动距离
@@ -53,6 +150,7 @@ public interface AbcRosInterface {
      * @param callBack 执行结果回调
      * @return 指令发送是否正常
      */
+
     public boolean startMove(float distance, String si, ActionCallBack callBack);
     /**
      * 发送身体转动请求给ROS
@@ -60,6 +158,7 @@ public interface AbcRosInterface {
      * @param callBack 执行结果回调
      * @return 指令发送是否正常
      */
+
     public boolean startBodyTurn(float angle, ActionCallBack callBack);
     /**
      * 发送头部转动请求给ROS
@@ -68,6 +167,7 @@ public interface AbcRosInterface {
      * @param callBack 执行结果回调
      * @return 指令发送是否正常
      */
+
     public boolean startHeadTurn(int direction, float angle, ActionCallBack callBack);
     /**
      * 发送停止当前动作指令给ROS
@@ -76,13 +176,29 @@ public interface AbcRosInterface {
      * @return 指令发送是否正常
      */
     public boolean stopAction(int actionType, ActionCallBack callBack);
+
     /**
      * 导航到固定点,或者巡航
      * @param location 数组长度为1则为导航，否则按照location数组顺序巡航
      * @param callBack 执行结果回调
      * @return 指令发送是否正常
      */
-    public boolean navigateToLocation(Location[] location, ActionCallBack callBack);
+    public boolean navigateToLocation(Location location, ActionCallBack callBack);
+
+    /**
+     * 导巡航
+     * @param location 按照location数组顺序巡航
+     * @param callBack 执行结果回调
+     * @return 指令发送是否正常
+     */
+    public boolean cruiseToLocations(Location[] location, ActionCallBack callBack);
+
+    /**
+     * 返回初始点，某些厂商的初始化点就是开始扫描地图的点。（康力优蓝存在要到初始点加载地图和复位的操作）
+     * @param callBack
+     * @return
+     */
+    public boolean goToOrigin(ActionCallBack callBack);
     /**
      * 暂停导航/巡航 需要支持恢复
      * @param callBack 执行结果回调
@@ -95,7 +211,7 @@ public interface AbcRosInterface {
      * @param callBack 执行结果回调
      * @return 指令发送是否正常
      */
-    public boolean cancleNavigate(ActionCallBack callBack);
+    public boolean cancelNavigate(ActionCallBack callBack);
     /**
      * 恢复处于暂停中的导航/巡航
      * @param callBack 继续导航/巡航的执行结果回调
@@ -210,6 +326,24 @@ public interface AbcRosInterface {
     }
 
     /**
+     * 重定位回调
+     */
+    public interface RelocationCallback{
+
+        /**
+         * 重定位成功
+         * @param location 返回重定位之后当前的位置
+         */
+        void onRelocationSuccess(Location location);
+
+        /**
+         * 重定位失败
+         * @param reason 返回失败的原因
+         */
+        void onRelocationFail(String reason);
+    }
+
+    /**
      * ROS相关交互监听器
      * 通过addAction/addPowerLevel来增加监听事件
      * ROS层需要事件对相应事件的回调
@@ -302,6 +436,11 @@ public interface AbcRosInterface {
          * @param actionType 动作类型
          */
         public void onActionComplete(int actionType);
+
+        /**
+         * @param cruisePoint  到达导航点回调
+         */
+        public void onReachedCruisePoint(String cruisePoint);
     }
     // 地图中位置信息，可以是点的名称或者是坐标（x,y）
     public class Location {
