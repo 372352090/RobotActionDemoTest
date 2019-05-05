@@ -40,7 +40,7 @@ ext {
 //    libraryname and artifact must be same
     libraryName = 'ActionLibrary'
     artifact = 'ActionLibrary'
-    libraryVersion = '1.0.5'
+    libraryVersion = '1.1.1'
 
     //以下三项只是对开源库的描述（应该不是必配项吧，没尝试过）
     libraryName = 'ActionLibrary'
@@ -66,8 +66,8 @@ ext {
 //1、先更改版本号libraryVersion
 //2、gradlew install，生成相关版本jar文件build->libs目录
 //3、gradlew bintrayUpload 上传
-apply from: 'https://raw.githubusercontent.com/nuuneoi/JCenter/master/installv1.gradle'
-apply from: 'https://raw.githubusercontent.com/nuuneoi/JCenter/master/bintrayv1.gradle'
+//apply from: 'https://raw.githubusercontent.com/nuuneoi/JCenter/master/installv1.gradle'
+//apply from: 'https://raw.githubusercontent.com/nuuneoi/JCenter/master/bintrayv1.gradle'
 tasks.withType(Javadoc) {
     options.addStringOption('encoding', 'UTF-8')
     options.addStringOption('charSet', 'UTF-8')

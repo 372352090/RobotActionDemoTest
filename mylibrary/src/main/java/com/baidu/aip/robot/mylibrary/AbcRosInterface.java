@@ -26,6 +26,12 @@ public interface AbcRosInterface {
     public static final int ACTION_TYPE_HUG = 16; // 本体集成动作集，拥抱动作
     public static final int ACTION_TYPE_GUID = 17; // 本体集成动作集，引导动作，这边请
     public static final int ACTION_TYPE_SALUTE = 18; // 本体集成动作集，敬礼动作
+    public static final String ACTION_TYPE_RAISE_HAND = "raise_hand"; // 本体集成动作集，举手动作
+    public static final String ACTION_TYPE_TWIST_HEAD = "twist_head"; // 本体集成动作集，点头动作
+    public static final String ACTION_TURN_HEAD_LEFT = "turn_head_left"; // 本体集成动作集，向左看动作
+    public static final String ACTION_TURN_HEAD_RIGHT = "turn_head_right"; // 本体集成动作集，向右看动作
+    public static final String ACTION_WAVE = "wave"; // 本体集成动作集，打招呼动作
+    public static final String ACTION_DO_AN_ACTION = "do_an_action"; // 本体集成动作集，动一下动作
 
     /**
      * @param mapName
@@ -117,7 +123,7 @@ public interface AbcRosInterface {
     /**
      * 机器人位置重定位,地图加载之后进行的定位操作。
      */
-    public void relocation(RelocationCallback callback);
+    public void relocation(Location location, RelocationCallback callback);
     /**
      * 注册监听ROS层电量，异常等相关信息
      * @param rosListener 监听器，ros根据监听器内action mFilterAction执行,回调当传入的值为mull时，代表注销检测
@@ -145,7 +151,7 @@ public interface AbcRosInterface {
     public float getBatteryScale();
     /**
      * 机器人移动制定距离
-     * @param distance 移动距离
+     * @param distance 移动距离,正值为向前走，负值为向后走。
      * @param si 移动距离对应单位,对应障碍物检测中的距离单位。
      * @param callBack 执行结果回调
      * @return 指令发送是否正常
@@ -163,7 +169,7 @@ public interface AbcRosInterface {
     /**
      * 发送头部转动请求给ROS
      * @param direction 水平转动为：0/垂直转动为：1
-     * @param angle 转动角度（顺时针正方向/逆时针负方向；向上为正/向下为负）
+     * @param angle 转动角度（顺时针正方向- 右/逆时针负方向 - 左；向上为正/向下为负）
      * @param callBack 执行结果回调
      * @return 指令发送是否正常
      */
@@ -171,7 +177,7 @@ public interface AbcRosInterface {
     public boolean startHeadTurn(int direction, float angle, ActionCallBack callBack);
     /**
      * 发送停止当前动作指令给ROS
-     * @param actionType 指令类型  见本接口提供的action类型值
+     * @param actionType 指令类型  见本接口提供的action类型值 actionType =  ACTION_TYPE_STOP_ACTION时停止动作。
      * @param callBack 执行结果回调
      * @return 指令发送是否正常
      */
@@ -226,9 +232,13 @@ public interface AbcRosInterface {
      * @return 指令发送是否正常
      */
     public boolean armAction(int armID, int actionID, ActionCallBack callBack);
-
     /**
-     * @param actionID 机器人复合动作指令标识
+     * @param actionID 机器人复合动作指令标识 actionID=ACTION_TYPE_RAISE_HAND(举手，
+     *                 actionID = ACTION_TYPE_TWIST_HEAD 点头
+     *                 actionID = ACTION_TURN_HEAD_LEFT 向左看动作
+     *                 actionID = ACTION_TURN_HEAD_RIGHT 向右看
+     *                 actionID = ACTION_WAVE 打招呼动作)
+     *                 actionID = ACTION_DO_AN_ACTION 动一下动作)
      * @param callBack  执行结果回调
      * @return  指令发送是否正常
      */
@@ -255,6 +265,13 @@ public interface AbcRosInterface {
      * @return 指令发送是否正常
      */
     public boolean moveToCharge(ActionCallBack callBack);
+
+    /**
+     * 使正在充电的设备取消充电
+     *
+     * @return 指令发送是否正常
+     */
+    public boolean stopCharge(ActionCallBack callBack);
     /**
      * 集成化动作：拥抱动作
      *
@@ -319,7 +336,8 @@ public interface AbcRosInterface {
         void onDetectException(String exceptionMsg);
 
         /**
-         * @return 我们关注的障碍物范围的一个集合如： 1~2（lowLevelRange） 2~3(highLevelRange)  key:String, value:float[] ({1,2})
+         * @return 我们关注的障碍物范围的一个集合如： 1~2（lowLevelRange） 2~3(highLevelRange)
+         * key:String, value:float[] ({1,2}) 其中默认单位是米（传入的观察的单位）
          */
         HashMap getDetectLevel();
 
@@ -358,39 +376,28 @@ public interface AbcRosInterface {
         public static final String ACTION_POWER_LEVELS = "power_levels";
         public static final String ACTION_POWER_TEMP = "power_temp";
         public static final String ACTION_ROS_EXCEPTION = "ros_exception";
-        /**
-         * 未充电
-         */
-        public static final int CHARGE_STATUS_IDLE = 1;
-        /**
-         * 充电中
-         */
-        public static final int CHARGE_STATUS_CHARGINE = 2;
+        public static final String ACTION_ROS_LOCATION_LOSS = "location_loss";
         /**
          * ROS启动完成
          */
         public abstract void onRosReady();
         /**
          * 电量达到指定等级时回调
-         * @param level 当前电量百分比
+         * @param action     监控等级
+         * @param level 当前电量百分比 ，同一个值（在非充电状态或者充电状态）只回调一次
+         * @param isCharging  是否正在充电，true是正在充电，false不是在充电状态
          */
-        public abstract void onPowerLevelReached(String action,float level);
+        public abstract void onPowerLevelReached(String action, float level, boolean isCharging);
         /**
          * 电池温度报警回调
          * @param temp 温度，当电池温度达到报警温度时回调
          */
         public abstract void onPowerTemp(float temp);
         /**
-         * 充电状态变化回调
+         * 机器人错误信息都是通过这个回调。比如：左臂故障。串口不通；回调的字符串的信息，写成中文。
          * @param exceptionMsg 异常信息
          */
         public abstract void onRosException(String exceptionMsg);
-        /**
-         * 充电状态变化回调
-         * @param status 充电中/IDLE参见CHARGE_STATUS_IDLE/HARGE_STATUS_CHARGINE
-         */
-        public abstract void onChargeStatue(int status);
-
         /**
          * 增加监听电池相关回调事件
          *
@@ -414,6 +421,12 @@ public interface AbcRosInterface {
      * 动作执行指令回调
      */
     public interface ActionCallBack {
+
+        // onActionProgress()函数actionType回调值：表示有突发障碍物出现，影响机器人原本规划好的路线。此时progress值为-1；
+        public static final int ACTION_CLOSE_OBSTACLES = 100;
+
+        // onActionProgress()函数actionType回调值：表示动作完成度。此时progress值为完成度的具体值；
+        public static final int ACTION_PERCENT = 200;
         /**
          * 动作指令执行进度回调
          * @param actionType 动作类型

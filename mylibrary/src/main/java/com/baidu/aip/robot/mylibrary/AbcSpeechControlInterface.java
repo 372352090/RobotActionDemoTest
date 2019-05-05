@@ -15,6 +15,10 @@ public interface AbcSpeechControlInterface {
 
     void registerSpeechLisenter(ThirdSpeechCallBack callBack);
 
+    void startWakeUp();
+
+    void stopWakeUp();
+
     void startASR();
 
     void stopASR();
